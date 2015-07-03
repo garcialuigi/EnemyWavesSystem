@@ -3,28 +3,44 @@ using System.Collections;
 using System.Collections.Generic;
 using System;
 
+/// <summary>
+/// Represents a group.
+/// This object orchestrate the activation of child objects.
+/// </summary>
 public class CombatGroup : CombatBaseObject
 {
-    [Header("Limite de FPObjects ativos")]
-    public int limit;
+    /// <summary>
+    /// How many objects it will tend to maintain activated.
+    /// </summary>
+    [SerializeField]
+    private int limit;
 
-    public bool activateAll = false;
+    /// <summary>
+    /// If yes, this will make the group ignore the limite variable, and activate all the child objects.
+    /// </summary>
+    [SerializeField]
+    private bool activateAll = false;
 
     private List<CombatBaseObject> objects = new List<CombatBaseObject>();
-    private int cursor = -1; // cursor
-    private int doneCount = 0; // contador de quantos ja estao done
+
+    private int cursor = -1;
+
+    private int doneCount = 0;
 
     protected override void Initialize()
     {
-        objects = new List<CombatBaseObject>();
+        // channel with the base class
+        OnActivate = ObjectOnActivated;
 
+        // setup the child objects
+        objects = new List<CombatBaseObject>();
         foreach (Transform child in transform)
         {
             if (child.gameObject.activeInHierarchy)
             {
                 CombatBaseObject temp = child.gameObject.GetComponent<CombatBaseObject>();
-                temp.onActivated = ObjectOnActivated;
-                temp.onDone = ObjectOnDone;
+                // register the done callback
+                temp.OnDone += ChildObjectOnDone;
                 objects.Add(temp);
             }
         }
@@ -34,6 +50,10 @@ public class CombatGroup : CombatBaseObject
         base.Initialize();
     }
 
+    /// <summary>
+    /// The first activation.
+    /// Called by the channel with the base class.
+    /// </summary>
     private void ObjectOnActivated(CombatBaseObject obj)
     {
         cursor = -1;
@@ -41,32 +61,29 @@ public class CombatGroup : CombatBaseObject
 
         for (int i = 0; i < limit; i++)
         {
-            ActivateNext();
+            objects[++cursor].Activate();
         }
     }
 
-    private void ObjectOnDone(CombatBaseObject obj)
+    /// <summary>
+    /// Channel callback with every child object.
+    /// When every child object gets done, this function will be called.
+    /// </summary>
+    /// <param name="obj"></param>
+    private void ChildObjectOnDone(CombatBaseObject obj)
     {
-        doneCount++; // incrementa o contador de done
-
-        if (doneCount == objects.Count)
-        { // se o contador de done eh igual ao numero de filhos, entao todos estao "feitos"
-            Done(); // fim de comportamento
-            return;
-        }
-
-        if (cursor + 1 < objects.Count)
+        if (++doneCount < objects.Count)
         {
-            ActivateNext(); // chama a rotina para ativar o proximo baseado no cursor
+            // call the next
+            if (++cursor < objects.Count)
+            {
+                objects[cursor].Activate();
+            }
         }
-    }
-
-    private void ActivateNext()
-    {
-        cursor++;
-        if (cursor < objects.Count)
+        else
         {
-            objects[cursor].Activate();
+            // this group is done
+            Done();
         }
     }
 }

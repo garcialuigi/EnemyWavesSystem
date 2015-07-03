@@ -1,74 +1,96 @@
 using UnityEngine;
 using System.Collections;
+using System;
 
+/// <summary>
+/// Superclass of all the child objects of a Combat Zone.
+/// Groups also derive from this.
+/// </summary>
 public class CombatBaseObject : MonoBehaviour
 {
-    protected bool initialized = false;
-    protected bool activated = false;
-	protected bool done = false;
-	protected CombatZone fightPoint;
-	public delegate void OnDoneDelegate (CombatBaseObject fpobj);
-	public OnDoneDelegate onDone;
-	public delegate void OnActivatedDelegate (CombatBaseObject fpobj);
-	public OnDoneDelegate onActivated;
+    private bool initialized = false;
+    
+    private bool activated = false;
+    
+    private bool done = false;
 
-	public virtual void Start ()
-	{
-		fightPoint = GetFightPoint ();
-		Initialize ();
-	}
+    /// <summary>
+    /// Reference to the combat zone(...parent).
+    /// </summary>
+    protected CombatZone combateZone;
 
-	protected virtual void Initialize ()
-	{
+    /// <summary>
+    /// Channel delegate, called by the Done function.
+    /// </summary>
+    public Action<CombatBaseObject> OnDone;
+
+    /// <summary>
+    /// Channel delegate, called by the Activate function.
+    /// </summary>
+    public Action<CombatBaseObject> OnActivate;
+
+    public void Start()
+    {
+        combateZone = FindTheCombatZone();
+        Initialize();
+    }
+
+    protected virtual void Initialize()
+    {
         initialized = true;
-	}
+    }
 
-	public void Activate ()
-	{
-		if (!activated) {
-			activated = true;
-			if (onActivated != null) {
-				onActivated (this);
-			}
-		}
-	}
+    public void Activate()
+    {
+        if (!activated)
+        {
+            activated = true;
+            // call the channel
+            if (OnActivate != null)
+            {
+                OnActivate(this);
+            }
+        }
+    }
 
-	protected void Done ()
-	{
-		done = true;
-		if (onDone != null) {
-			onDone (this);
-		}
-	}
+    protected void Done()
+    {
+        done = true;
+        // call the channel
+        if (OnDone != null)
+        {
+            OnDone(this);
+        }
+    }
 
     public bool IsInitialized()
     {
         return initialized;
     }
 
-	public bool IsActivated ()
-	{
-		return activated;
-	}
+    public bool IsActivated()
+    {
+        return activated;
+    }
 
-	public bool IsDone ()
-	{
-		return done;
-	}
+    public bool IsDone()
+    {
+        return done;
+    }
 
-	private CombatZone GetFightPoint ()
-	{
-		Transform cursor = gameObject.transform;
-		while (true) {
-			if (cursor == null) {
-				return null;
-			}
-
-			if (cursor.GetComponent<CombatZone> () != null) {
-				return cursor.GetComponent<CombatZone> ();
-			}
-			cursor = cursor.parent;
-		}
-	}
+    private CombatZone FindTheCombatZone()
+    {
+        CombatZone theCombatZoneObject = null;
+        Transform cursor = gameObject.transform;
+        while (theCombatZoneObject == null)
+        {
+            if (cursor == null)
+            {
+                break;
+            }
+            theCombatZoneObject = cursor.GetComponent<CombatZone>();
+            cursor = cursor.parent;
+        }
+        return theCombatZoneObject;
+    }
 }
-
